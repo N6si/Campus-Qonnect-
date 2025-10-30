@@ -1,0 +1,14 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+venv/
+__pycache__/
+.env
+
+# Build and cache files
+dist/
+build/
+.cache/
