@@ -74,9 +74,6 @@ npm run dev
 
 
 Preview
-<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/356e6f63-53fa-4577-ad34-2f2d1a3ac2ba" />
-<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/0d217bb9-a519-4961-9cb6-6aacfe887de6" />
-<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/55b4c596-6225-423a-9b96-f23bacc8ae62" />
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/6c953f66-4eb3-4b43-bef1-24a3040e8209" />
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/e9c1ebea-bb21-4168-ab4e-9b5fbda6da94" />
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/c51b3ddc-d98d-4568-b8f9-4b894358a0ab" />
@@ -85,3 +82,6 @@ Preview
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/56955fc6-a4e8-4c65-82a4-40f695d2a8f3" />
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/be7a869e-6aa8-4459-8744-1efb1a236db3" />
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/a792d472-aeb7-4431-b616-4142b120852e" />
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/356e6f63-53fa-4577-ad34-2f2d1a3ac2ba" />
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/0d217bb9-a519-4961-9cb6-6aacfe887de6" />
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/55b4c596-6225-423a-9b96-f23bacc8ae62" />
