@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useContext } from "react";
 import API from "../../lib/api";
-import Card from "../../components/Card";
 import { AuthContext } from "../../context/AuthContext";
 import Sidebar from "../../components/Sidebar";
+import Navbar from "../../components/Navbar";
 import PostCard from "../../components/PostCard";
+import { Send, Plus, Zap, Users, Rss, Settings, ArrowRight, ChevronRight } from "lucide-react";
 
-// Cleaned up demo data - no duplicates
 const DEMO_MENTORS = [
   { id: 1, name: "Dr. Ananya Rao", title: "Associate Professor", spec: "AI & NLP", avatar: "https://i.pravatar.cc/120?img=32" },
   { id: 2, name: "Prof. Vikram Singh", title: "Senior Lecturer", spec: "Software Engineering", avatar: "https://i.pravatar.cc/120?img=12" },
@@ -20,113 +20,40 @@ const DEMO_CLUBS = [
   { id: 4, name: "Design Studio", short: "UI/UX workshops and design sprints.", logo: "https://picsum.photos/seed/design/80" },
 ];
 
-// Separate suggestions - different mentors not already shown above
 const DEMO_SUGGESTIONS = [
   { id: 5, name: "Dr. Sarah Mitchell", note: "Machine Learning Expert", avatar: "https://i.pravatar.cc/100?img=45" },
   { id: 6, name: "Prof. James Wilson", note: "Blockchain & Web3", avatar: "https://i.pravatar.cc/100?img=33" },
   { id: 7, name: "Dr. Priya Sharma", note: "Cybersecurity Specialist", avatar: "https://i.pravatar.cc/100?img=28" },
 ];
 
-function MentorCard({ m }) {
+const quickActions = [
+  { id: 1, name: "Join Club", icon: <Plus size={18} />, color: "var(--blue)", bg: "rgba(74,140,255,0.12)" },
+  { id: 2, name: "Ask Mentor", icon: <Zap size={18} />, color: "var(--purple)", bg: "rgba(167,139,250,0.12)" },
+  { id: 3, name: "View Feed", icon: <Rss size={18} />, color: "var(--accent)", bg: "var(--accent-soft)" },
+  { id: 4, name: "Edit Profile", icon: <Settings size={18} />, color: "var(--green)", bg: "rgba(52,211,153,0.12)" },
+];
+
+function SectionHeader({ title, action }) {
   return (
-    <div className="group bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-center gap-4 mb-4">
-        <img src={m.avatar} alt={m.name} className="w-16 h-16 rounded-full object-cover ring-2 ring-indigo-100" />
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-slate-800 truncate">{m.name}</div>
-          <div className="text-xs text-slate-500 truncate">{m.title}</div>
-        </div>
-      </div>
-      <div className="mb-4">
-        <span className="inline-block px-3 py-1 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 rounded-full text-xs font-medium">
-          {m.spec}
-        </span>
-      </div>
-      <div className="flex gap-2">
-        <button className="flex-1 px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg text-sm font-medium hover:from-indigo-600 hover:to-purple-600 transition">
-          Request Mentor
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+      <h3 className="section-heading">{title}</h3>
+      {action && (
+        <button
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.25rem",
+            fontSize: "0.75rem",
+            color: "var(--accent)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "DM Sans, sans-serif",
+            fontWeight: 500,
+          }}
+        >
+          {action} <ChevronRight size={12} />
         </button>
-        <button className="px-3 py-2 text-sm text-slate-600 hover:text-indigo-600 font-medium transition">
-          View →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ClubCard({ c }) {
-  return (
-    <div className="group bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-center gap-4 mb-4">
-        <img src={c.logo} alt={c.name} className="w-14 h-14 rounded-lg object-cover ring-2 ring-gray-100" />
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-slate-800 truncate">{c.name}</div>
-          <div className="text-xs text-slate-500 line-clamp-2">{c.short}</div>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button className="flex-1 text-sm px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition">
-          Join
-        </button>
-        <button className="px-3 py-2 text-sm text-slate-600 hover:text-indigo-600 font-medium transition">
-          View →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function QuickActions() {
-  const [activeAction, setActiveAction] = useState(null);
-
-  const actions = [
-    { id: 1, name: "Join Club", icon: "➕", gradient: "from-blue-500 to-cyan-500" },
-    { id: 2, name: "Ask Mentor", icon: "💬", gradient: "from-purple-500 to-pink-500" },
-    { id: 3, name: "View Feed", icon: "📜", gradient: "from-orange-500 to-red-500" },
-    { id: 4, name: "Edit Profile", icon: "⚙️", gradient: "from-green-500 to-emerald-500" },
-  ];
-
-  const demoInfo = {
-    1: (
-      <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm">
-        🎯 <strong>Join Club:</strong> Browse and join popular campus clubs such as Coding Club, AI Innovators, and Design Studio.  
-        Get access to events, challenges, and community learning!
-      </div>
-    ),
-    2: (
-      <div className="mt-4 p-4 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-sm">
-        💬 <strong>Ask Mentor:</strong> Reach out to experienced professors and mentors for project guidance,  
-        academic help, or industry insights. Try connecting with <strong>Dr. Ananya Rao</strong> or <strong>Prof. Vikram Singh</strong>.
-      </div>
-    ),
-    3: (
-      <div className="mt-4 p-4 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-sm">
-        📰 <strong>View Feed:</strong> Stay updated with campus announcements, recent posts, and trending student discussions.
-      </div>
-    ),
-    4: (
-      <div className="mt-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-        ⚙️ <strong>Edit Profile:</strong> Update your bio, interests, and academic details to get smarter mentor & club recommendations.
-      </div>
-    ),
-  };
-
-  return (
-    <div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {actions.map((a) => (
-          <button
-            key={a.id}
-            onClick={() => setActiveAction(activeAction === a.id ? null : a.id)}
-            className={`flex flex-col items-center justify-center gap-2 p-5 rounded-xl bg-gradient-to-br ${a.gradient} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}
-          >
-            <span className="text-2xl">{a.icon}</span>
-            <span className="text-sm font-semibold">{a.name}</span>
-          </button>
-        ))}
-      </div>
-      {activeAction && (
-        <div className="animate-fadeIn">{demoInfo[activeAction]}</div>
       )}
     </div>
   );
@@ -135,6 +62,8 @@ function QuickActions() {
 export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({ title: "", content: "" });
+  const [posting, setPosting] = useState(false);
+  const [activeAction, setActiveAction] = useState(null);
   const { user } = useContext(AuthContext);
 
   const fetchPosts = async () => {
@@ -146,9 +75,7 @@ export default function Feed() {
     }
   };
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+  useEffect(() => { fetchPosts(); }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -156,130 +83,313 @@ export default function Feed() {
       alert("Please fill in both title and content");
       return;
     }
+    setPosting(true);
     try {
       await API.post("/posts", form);
       setForm({ title: "", content: "" });
       fetchPosts();
     } catch (err) {
       alert("Failed to post");
+    } finally {
+      setPosting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      <div className="flex gap-8 p-6 lg:p-12 max-w-[2000px] mx-auto">
-        {/* Sidebar */}
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
+      <Navbar />
+      <div
+        style={{
+          maxWidth: "1600px",
+          margin: "0 auto",
+          padding: "2rem 1.5rem",
+          display: "flex",
+          gap: "1.5rem",
+          alignItems: "flex-start",
+        }}
+      >
         <Sidebar user={user} />
 
-        {/* Main Content */}
-        <div className="flex-1 max-w-[1400px] space-y-8">
-          {/* Create Post Section */}
-          <Card>
-            <form onSubmit={submit} className="space-y-4">
-              <h2 className="text-lg font-bold text-slate-800 mb-4">Create Post</h2>
+        <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+          {/* Create Post */}
+          <div className="card animate-fade-up">
+            <SectionHeader title="Create Post" />
+            <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <input
-                placeholder="Post Title"
+                placeholder="Post title..."
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none transition"
+                className="form-input"
                 required
               />
               <textarea
                 placeholder="What's on your mind?"
                 value={form.content}
                 onChange={(e) => setForm({ ...form, content: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none transition resize-none"
-                rows="4"
+                className="form-input"
+                style={{ resize: "none", minHeight: "80px" }}
+                rows={3}
                 required
               />
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-600">
-                  Posting as <strong className="text-indigo-600">{user?.username || user?.name || "Guest"}</strong>
-                </div>
-                <button 
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Posting as{" "}
+                  <strong style={{ color: "var(--accent)" }}>{user?.username || user?.name || "Guest"}</strong>
+                </span>
+                <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200"
+                  disabled={posting}
+                  className="btn-primary"
+                  style={{ display: "flex", alignItems: "center", gap: "0.375rem", opacity: posting ? 0.7 : 1 }}
                 >
-                  Post
+                  <Send size={14} />
+                  {posting ? "Posting..." : "Post"}
                 </button>
               </div>
             </form>
-          </Card>
-
-          {/* Posts Feed */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-slate-800">Recent Posts</h2>
-            {posts.length > 0 ? (
-              posts.map((p) => <PostCard key={p.id} post={p} />)
-            ) : (
-              <div className="text-center py-12 bg-white/70 backdrop-blur-md rounded-xl border border-gray-200">
-                <p className="text-slate-500">No posts yet. Be the first to share something!</p>
-              </div>
-            )}
           </div>
 
           {/* Quick Actions */}
-          <section className="bg-white/70 backdrop-blur-md rounded-xl shadow-md p-6 border border-gray-200">
-            <h3 className="font-bold text-lg text-slate-800 mb-4">Quick Actions</h3>
-            <QuickActions />
-          </section>
-
-          {/* Mentors Section */}
-          <section className="bg-white/70 backdrop-blur-md rounded-xl shadow-md p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg text-slate-800">Available Mentors</h3>
-              <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                View All →
-              </button>
+          <div className="card animate-fade-up animate-delay-1">
+            <SectionHeader title="Quick Actions" />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
+              {quickActions.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setActiveAction(activeAction === a.id ? null : a.id)}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "1rem 0.5rem",
+                    borderRadius: "0.625rem",
+                    background: activeAction === a.id ? a.bg : "var(--bg-secondary)",
+                    border: `1px solid ${activeAction === a.id ? `${a.color}30` : "var(--border)"}`,
+                    color: activeAction === a.id ? a.color : "var(--text-secondary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    fontFamily: "DM Sans, sans-serif",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeAction !== a.id) {
+                      e.currentTarget.style.background = a.bg;
+                      e.currentTarget.style.color = a.color;
+                      e.currentTarget.style.borderColor = `${a.color}30`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeAction !== a.id) {
+                      e.currentTarget.style.background = "var(--bg-secondary)";
+                      e.currentTarget.style.color = "var(--text-secondary)";
+                      e.currentTarget.style.borderColor = "var(--border)";
+                    }
+                  }}
+                >
+                  {a.icon}
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>{a.name}</span>
+                </button>
+              ))}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          </div>
+
+          {/* Recent Posts */}
+          <div className="animate-fade-up animate-delay-2">
+            <SectionHeader title="Recent Posts" action="View all" />
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {posts.length > 0 ? (
+                posts.map((p) => <PostCard key={p.id} post={p} />)
+              ) : (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "3rem",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "1rem",
+                    color: "var(--text-muted)",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  No posts yet. Be the first to share something!
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mentors */}
+          <div className="card animate-fade-up animate-delay-3">
+            <SectionHeader title="Available Mentors" action="View all" />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
               {DEMO_MENTORS.map((m) => (
-                <MentorCard key={m.id} m={m} />
+                <div
+                  key={m.id}
+                  style={{
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "0.75rem",
+                    padding: "1rem",
+                    transition: "all 0.2s ease",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-strong)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                    <img src={m.avatar} alt={m.name} style={{ width: "40px", height: "40px", borderRadius: "9999px", objectFit: "cover" }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{m.title}</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <span className="tag-blue" style={{ fontSize: "0.7rem" }}>{m.spec}</span>
+                  </div>
+                  <button
+                    style={{
+                      width: "100%",
+                      padding: "0.4rem",
+                      borderRadius: "0.375rem",
+                      background: "var(--accent-soft)",
+                      border: "1px solid rgba(245,166,35,0.2)",
+                      color: "var(--accent)",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "DM Sans, sans-serif",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Request Mentor
+                  </button>
+                </div>
               ))}
             </div>
-          </section>
+          </div>
 
-          {/* Clubs Section */}
-          <section className="bg-white/70 backdrop-blur-md rounded-xl shadow-md p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg text-slate-800">Active Clubs</h3>
-              <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                Browse All →
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Clubs */}
+          <div className="card animate-fade-up">
+            <SectionHeader title="Active Clubs" action="Browse all" />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
               {DEMO_CLUBS.map((c) => (
-                <ClubCard key={c.id} c={c} />
+                <div
+                  key={c.id}
+                  style={{
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "0.75rem",
+                    padding: "1rem",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-strong)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                    <img src={c.logo} alt={c.name} style={{ width: "36px", height: "36px", borderRadius: "0.5rem", objectFit: "cover" }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>{c.name}</div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.short}</div>
+                    </div>
+                  </div>
+                  <button
+                    style={{
+                      width: "100%",
+                      padding: "0.4rem",
+                      borderRadius: "0.375rem",
+                      background: "rgba(74,140,255,0.1)",
+                      border: "1px solid rgba(74,140,255,0.2)",
+                      color: "var(--blue)",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "DM Sans, sans-serif",
+                    }}
+                  >
+                    Join Club
+                  </button>
+                </div>
               ))}
             </div>
-          </section>
+          </div>
 
           {/* Smart Suggestions */}
-          <section className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border border-indigo-200">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">✨</span>
-              <h3 className="font-bold text-lg text-slate-800">Smart Suggestions</h3>
+          <div
+            style={{
+              background: "linear-gradient(135deg, rgba(245,166,35,0.06) 0%, rgba(74,140,255,0.04) 100%)",
+              border: "1px solid rgba(245,166,35,0.12)",
+              borderRadius: "1rem",
+              padding: "1.25rem",
+            }}
+            className="animate-fade-up"
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+              <span style={{ fontSize: "1rem" }}>✨</span>
+              <h3 className="section-heading">Smart Suggestions</h3>
             </div>
-            <p className="text-sm text-slate-600 mb-5">AI-powered mentor recommendations based on your interests</p>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "1rem", marginTop: "0.25rem" }}>
+              AI-powered mentor recommendations based on your interests
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
               {DEMO_SUGGESTIONS.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center gap-4 bg-white/90 p-4 rounded-xl border border-gray-200 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "0.75rem",
+                    padding: "0.75rem",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(245,166,35,0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                  }}
                 >
-                  <img src={s.avatar} alt={s.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-100" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-slate-800 text-sm truncate">{s.name}</div>
-                    <div className="text-xs text-slate-500 truncate">{s.note}</div>
+                  <img src={s.avatar} alt={s.name} style={{ width: "36px", height: "36px", borderRadius: "9999px", objectFit: "cover", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{s.note}</div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition whitespace-nowrap">
+                  <button
+                    style={{
+                      padding: "0.3rem 0.5rem",
+                      borderRadius: "0.375rem",
+                      background: "var(--accent-soft)",
+                      border: "1px solid rgba(245,166,35,0.2)",
+                      color: "var(--accent)",
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "DM Sans, sans-serif",
+                      flexShrink: 0,
+                    }}
+                  >
                     Connect
                   </button>
                 </div>
               ))}
             </div>
-          </section>
-        </div>
+          </div>
+
+        </main>
       </div>
     </div>
   );
