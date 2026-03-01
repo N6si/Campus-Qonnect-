@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Central API client for the backend
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: "https://campus-qonnect-a-realtime-social.onrender.com",
   headers: { "Content-Type": "application/json" },
 });
 
