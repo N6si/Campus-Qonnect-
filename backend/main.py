@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -9,8 +10,12 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from bson import ObjectId
 
-# --- MongoDB setup ---
-client = MongoClient("mongodb+srv://raj123:dGO25AZ8s8Hp@cluster0.ohn3vgk.mongodb.net/?retryWrites=true&w=majority")
+# --- MongoDB setup (uses environment variable) ---
+MONGODB_URL = os.environ.get(
+    "MONGODB_URL",
+    "mongodb+srv://raj123:dGO25AZ8s8Hp@cluster0.ohn3vgk.mongodb.net/?retryWrites=true&w=majority"
+)
+client = MongoClient(MONGODB_URL)
 db = client["college_social_network"]
 users_collection = db["users"]
 students_collection = db["students"]
@@ -18,7 +23,7 @@ mentors_collection = db["mentors"]
 posts_collection = db["posts"]
 
 # --- JWT & Password hashing ---
-SECRET_KEY = "your_secret_key"
+SECRET_KEY = os.environ.get("SECRET_KEY", "your_secret_key_change_this_in_production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -45,7 +50,6 @@ class UserCreate(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-
 
 class UserOut(BaseModel):
     id: str
@@ -115,7 +119,6 @@ def authenticate_user(username: str, password: str):
         return None
     return user
 
-
 # --- Current user dependency ---
 def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_access_token(token)
@@ -139,9 +142,16 @@ def require_role(allowed_roles: List[str]):
 
 # --- FastAPI setup ---
 app = FastAPI(title="CampusConnect API")
+
+# CORS — allows both local dev and your Vercel frontend
+ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:3000"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -149,7 +159,7 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"message": "CampusConnect API is running"}
+    return {"message": "CampusConnect API is running ✅"}
 
 # --- Signup & Login ---
 @app.post("/signup", response_model=UserOut)
@@ -231,12 +241,10 @@ def assign_mentor(data: MentorAssign, user=Depends(require_role(["admin", "mento
 
 @app.get("/api/mentor/requests")
 def get_mentor_requests(user=Depends(require_role(["mentor", "admin"]))):
-    # Temporary dummy data (replace later with real DB logic)
     return [
         {"student_name": "Raj Sharma", "status": "Pending"},
         {"student_name": "Aditi Mehta", "status": "Accepted"},
     ]
-
 
 # --- Posts routes ---
 @app.post("/api/posts", response_model=PostOut)
@@ -248,16 +256,13 @@ def create_post(post: PostIn, current_user: dict = Depends(get_current_user)):
     })
     res = posts_collection.insert_one(post_data)
     new_post = posts_collection.find_one({"_id": res.inserted_id})
-    new_post["id"] = str(new_post["_id"])
     return PostOut(
-        id=new_post["id"],
+        id=str(new_post["_id"]),
         title=new_post["title"],
         content=new_post["content"],
         author_username=new_post["author_username"],
         created_at=new_post["created_at"]
     )
-
-
 
 @app.get("/api/posts", response_model=List[PostOut])
 def list_posts():
@@ -269,3 +274,12 @@ def list_posts():
         author_username=p["author_username"],
         created_at=p["created_at"]
     ) for p in posts]
+
+# --- Admin dashboard stats ---
+@app.get("/api/dashboard/stats")
+def dashboard_stats(user=Depends(require_role(["admin"]))):
+    return {
+        "users_count": users_collection.count_documents({}),
+        "posts_count": posts_collection.count_documents({}),
+        "mentor_requests": 5,  # replace with real count later
+    }
