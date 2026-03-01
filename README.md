@@ -1,4 +1,16 @@
 # 🎓 CampusConnect (Campus-Qonnect)
+Vercel Hosted + Render(Backend)
+
+Online Hosted Vercel(frontend)+Render Backend
+
+https://campus-qonnect-a-realtime-social.onrender.com/
+Backend link
+
+https://campus-qonnect.vercel.app/
+Frontend link
+
+
+
 
 A modern campus networking platform that connects **students, teachers, mentors, and alumni**.  
 Built with **FastAPI + React (Next.js) + MongoDB**, it enables students to interact, form clubs, ask mentors, and stay updated with campus life.
