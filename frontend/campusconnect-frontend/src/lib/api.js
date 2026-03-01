@@ -1,6 +1,5 @@
 import axios from "axios";
 
-// Central API client for the backend
 const API = axios.create({
   baseURL: "https://campus-qonnect-a-realtime-social.onrender.com",
   headers: { "Content-Type": "application/json" },
