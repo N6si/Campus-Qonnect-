@@ -1,6 +1,5 @@
 import { createContext, useState, useEffect } from "react";
 import API from "../lib/api";
-import axios from "axios";
 
 // Create Context
 export const AuthContext = createContext();
@@ -31,11 +30,10 @@ export const AuthProvider = ({ children }) => {
   const login = async ({ username, password }) => {
     setLoading(true);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/login", { username, password });
+      const res = await API.post("/login", { username, password });
       const token = res.data?.access_token || res.data?.token || null;
       if (!token) throw new Error("No token received");
       localStorage.setItem("token", token);
-
       const payload = parseJwt(token);
       const u = { username: payload?.sub || payload?.username, role: payload?.role };
       setUser(u);
@@ -53,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   const signup = async ({ username, password, role, bio, year, major, expertise }) => {
     setLoading(true);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/signup", { username, password, role, bio, year, major, expertise });
+      const res = await API.post("/signup", { username, password, role, bio, year, major, expertise });
       return res.data;
     } catch (err) {
       console.error("Signup failed:", err.response?.data || err.message);
