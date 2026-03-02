@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const BASE = "https://campus-qonnect-a-realtime-social.onrender.com";
+
 const API = axios.create({
-  baseURL: "https://campus-qonnect-a-realtime-social.onrender.com",
+  baseURL: BASE,
   headers: { "Content-Type": "application/json" },
 });
 
