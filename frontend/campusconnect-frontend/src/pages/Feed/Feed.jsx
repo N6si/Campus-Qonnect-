@@ -68,7 +68,7 @@ export default function Feed() {
 
   const fetchPosts = async () => {
     try {
-      const res = await API.get("/posts");
+      const res = await API.get("/api/posts");  // ✅ fixed
       setPosts(res.data || []);
     } catch (err) {
       console.error(err);
@@ -85,7 +85,7 @@ export default function Feed() {
     }
     setPosting(true);
     try {
-      await API.post("/posts", form);
+      await API.post("/api/posts", form);  // ✅ fixed
       setForm({ title: "", content: "" });
       fetchPosts();
     } catch (err) {
