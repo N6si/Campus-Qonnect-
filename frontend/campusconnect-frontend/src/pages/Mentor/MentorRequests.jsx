@@ -5,20 +5,17 @@ import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
 import { CheckCircle, XCircle, Clock, Send, Users } from "lucide-react";
 
-const DEMO_MENTORS = [
-  { name: "Dr. Ananya Rao", spec: "AI & NLP", avatar: "https://i.pravatar.cc/60?img=32" },
-  { name: "Prof. Vikram Singh", spec: "Software Engineering", avatar: "https://i.pravatar.cc/60?img=12" },
-  { name: "Dr. Maria Chen", spec: "Robotics", avatar: "https://i.pravatar.cc/60?img=56" },
-  { name: "Dr. Liam O'Connor", spec: "Data Science", avatar: "https://i.pravatar.cc/60?img=8" },
-  { name: "Dr. Sarah Mitchell", spec: "Machine Learning", avatar: "https://i.pravatar.cc/60?img=45" },
-  { name: "Prof. James Wilson", spec: "Blockchain & Web3", avatar: "https://i.pravatar.cc/60?img=33" },
+const FALLBACK_MENTORS = [
+  { username: "Dr. Ananya Rao", expertise: "AI & NLP" },
+  { username: "Prof. Vikram Singh", expertise: "Software Engineering" },
+  { username: "Dr. Maria Chen", expertise: "Robotics" },
 ];
 
 function StatusBadge({ status }) {
   const styles = {
     pending: { color: "var(--accent)", bg: "var(--accent-soft)", border: "rgba(245,166,35,0.2)", icon: <Clock size={11} /> },
     accepted: { color: "var(--green)", bg: "rgba(52,211,153,0.1)", border: "rgba(52,211,153,0.2)", icon: <CheckCircle size={11} /> },
-    rejected: { color: "var(--red)", bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.2)", icon: <XCircle size={11} /> },
+    rejected: { color: "#f87171", bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.2)", icon: <XCircle size={11} /> },
   };
   const s = styles[status] || styles.pending;
   return (
@@ -30,6 +27,8 @@ function StatusBadge({ status }) {
 
 // ── STUDENT VIEW ──────────────────────────────────────────────
 function StudentView({ user }) {
+  const [teachers, setTeachers] = useState([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(true);
   const [myRequests, setMyRequests] = useState([]);
   const [selectedMentor, setSelectedMentor] = useState(null);
   const [message, setMessage] = useState("");
@@ -41,6 +40,18 @@ function StudentView({ user }) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const fetchTeachers = async () => {
+    setLoadingTeachers(true);
+    try {
+      const res = await API.get("/api/teachers");
+      setTeachers(res.data?.length > 0 ? res.data : FALLBACK_MENTORS);
+    } catch (err) {
+      setTeachers(FALLBACK_MENTORS);
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
   const fetchMyRequests = async () => {
     try {
       const res = await API.get("/api/mentor/my-requests");
@@ -48,7 +59,10 @@ function StudentView({ user }) {
     } catch (err) { console.error(err); }
   };
 
-  useEffect(() => { fetchMyRequests(); }, []);
+  useEffect(() => {
+    fetchTeachers();
+    fetchMyRequests();
+  }, []);
 
   const sendRequest = async (mentorName) => {
     setSending(true);
@@ -65,66 +79,88 @@ function StudentView({ user }) {
     }
   };
 
+  // Get initials from username
+  const getInitials = (name) => name ? name.slice(0, 2).toUpperCase() : "??";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Toast */}
       {toast && (
-        <div style={{ position: "fixed", top: "1rem", right: "1rem", zIndex: 999, padding: "0.75rem 1.25rem", borderRadius: "0.625rem", background: toast.type === "error" ? "rgba(248,113,113,0.15)" : "rgba(52,211,153,0.15)", border: `1px solid ${toast.type === "error" ? "rgba(248,113,113,0.3)" : "rgba(52,211,153,0.3)"}`, color: toast.type === "error" ? "var(--red)" : "var(--green)", fontSize: "0.875rem", fontWeight: 500 }}>
+        <div style={{ position: "fixed", top: "1rem", right: "1rem", zIndex: 999, padding: "0.75rem 1.25rem", borderRadius: "0.625rem", background: toast.type === "error" ? "rgba(248,113,113,0.15)" : "rgba(52,211,153,0.15)", border: `1px solid ${toast.type === "error" ? "rgba(248,113,113,0.3)" : "rgba(52,211,153,0.3)"}`, color: toast.type === "error" ? "#f87171" : "var(--green)", fontSize: "0.875rem", fontWeight: 500 }}>
           {toast.msg}
         </div>
       )}
 
-      {/* Available Mentors */}
+      {/* Available Teachers */}
       <div className="card">
-        <h2 className="section-heading" style={{ marginBottom: "1rem" }}>Request a Mentor</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
-          {DEMO_MENTORS.map((m) => (
-            <div key={m.name} style={{ background: "var(--bg-secondary)", border: `1px solid ${selectedMentor === m.name ? "var(--accent)" : "var(--border)"}`, borderRadius: "0.75rem", padding: "1rem", transition: "all 0.2s ease" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
-                <img src={m.avatar} alt={m.name} style={{ width: "40px", height: "40px", borderRadius: "9999px" }} />
-                <div>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>{m.name}</div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{m.spec}</div>
-                </div>
-              </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2 className="section-heading">Available Teachers & Mentors</h2>
+          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", padding: "0.2rem 0.6rem", borderRadius: "0.375rem", background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
+            {teachers.length} available
+          </span>
+        </div>
 
-              {selectedMentor === m.name ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <textarea
-                    placeholder="Add a message (optional)..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="form-input"
-                    style={{ resize: "none", fontSize: "0.75rem", minHeight: "60px" }}
-                    rows={2}
-                  />
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button
-                      onClick={() => sendRequest(m.name)}
-                      disabled={sending}
-                      style={{ flex: 1, padding: "0.4rem", borderRadius: "0.375rem", background: "var(--accent)", border: "none", color: "#0a0c14", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
-                    >
-                      <Send size={11} /> {sending ? "Sending..." : "Send"}
-                    </button>
-                    <button
-                      onClick={() => { setSelectedMentor(null); setMessage(""); }}
-                      style={{ padding: "0.4rem 0.75rem", borderRadius: "0.375rem", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "0.75rem", cursor: "pointer" }}
-                    >
-                      Cancel
-                    </button>
+        {loadingTeachers ? (
+          <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            Loading teachers...
+          </div>
+        ) : teachers.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            No teachers available yet.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
+            {teachers.map((t) => (
+              <div key={t.username} style={{ background: "var(--bg-secondary)", border: `1px solid ${selectedMentor === t.username ? "var(--accent)" : "var(--border)"}`, borderRadius: "0.75rem", padding: "1rem", transition: "all 0.2s ease" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                  {/* Avatar with initials */}
+                  <div style={{ width: "40px", height: "40px", borderRadius: "9999px", background: "var(--accent-soft)", border: "1px solid rgba(245,166,35,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--accent)", flexShrink: 0 }}>
+                    {getInitials(t.username)}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>{t.username}</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--accent)" }}>{t.expertise || "Not specified"}</div>
+                    {t.bio && <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>{t.bio.slice(0, 40)}{t.bio.length > 40 ? "..." : ""}</div>}
                   </div>
                 </div>
-              ) : (
-                <button
-                  onClick={() => setSelectedMentor(m.name)}
-                  style={{ width: "100%", padding: "0.4rem", borderRadius: "0.375rem", background: "var(--accent-soft)", border: "1px solid rgba(245,166,35,0.2)", color: "var(--accent)", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}
-                >
-                  Request Mentor
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+
+                {selectedMentor === t.username ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <textarea
+                      placeholder="Add a message (optional)..."
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      className="form-input"
+                      style={{ resize: "none", fontSize: "0.75rem", minHeight: "60px" }}
+                      rows={2}
+                    />
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button
+                        onClick={() => sendRequest(t.username)}
+                        disabled={sending}
+                        style={{ flex: 1, padding: "0.4rem", borderRadius: "0.375rem", background: "var(--accent)", border: "none", color: "#0a0c14", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
+                      >
+                        <Send size={11} /> {sending ? "Sending..." : "Send"}
+                      </button>
+                      <button
+                        onClick={() => { setSelectedMentor(null); setMessage(""); }}
+                        style={{ padding: "0.4rem 0.75rem", borderRadius: "0.375rem", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "0.75rem", cursor: "pointer" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSelectedMentor(t.username)}
+                    style={{ width: "100%", padding: "0.4rem", borderRadius: "0.375rem", background: "var(--accent-soft)", border: "1px solid rgba(245,166,35,0.2)", color: "var(--accent)", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}
+                  >
+                    Request Mentor
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* My Requests */}
