@@ -219,6 +219,17 @@ def update_profile(update: UserUpdate, current_user=Depends(get_current_user)):
         "expertise": updated.get("expertise"),
     }
 
+# --- Teachers ---
+@app.get("/api/teachers")
+def get_teachers(user=Depends(get_current_user)):
+    teachers = list(users_collection.find({"role": {"$in": ["teacher", "mentor"]}}))
+    return [{
+        "username": t["username"],
+        "expertise": t.get("expertise", "Not specified"),
+        "bio": t.get("bio", ""),
+        "major": t.get("major", ""),
+    } for t in teachers]
+
 # --- Students ---
 @app.get("/api/students")
 def list_students(user=Depends(get_current_user)):
