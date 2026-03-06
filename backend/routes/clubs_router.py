@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
-from database import db
-from auth import get_current_user
+from main import db, get_current_user
 
 router = APIRouter()
 
