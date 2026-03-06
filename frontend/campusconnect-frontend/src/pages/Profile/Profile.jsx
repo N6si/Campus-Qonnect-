@@ -14,16 +14,17 @@ const badges = [
 ];
 
 export default function Profile() {
-  const { user, login } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [form, setForm] = useState({
+  const [profileData, setProfileData] = useState({
     bio: user?.bio || "",
     year: user?.year || "",
     major: user?.major || "",
     expertise: user?.expertise || "",
   });
+  const [form, setForm] = useState({ ...profileData });
 
   if (!user) return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
@@ -43,16 +44,19 @@ export default function Profile() {
     setSaving(true);
     try {
       const payload = {};
-      if (form.bio) payload.bio = form.bio;
+      if (form.bio !== undefined) payload.bio = form.bio;
       if (form.year) payload.year = parseInt(form.year);
-      if (form.major) payload.major = form.major;
-      if (form.expertise) payload.expertise = form.expertise;
+      if (form.major !== undefined) payload.major = form.major;
+      if (form.expertise !== undefined) payload.expertise = form.expertise;
 
       await API.put("/api/profile", payload);
+
+      // ✅ Update displayed data immediately
+      const updated = { ...profileData, ...payload };
+      setProfileData(updated);
+      setForm(updated);
       setEditing(false);
       showToast("Profile updated successfully!");
-      // Update local user data
-      Object.assign(user, payload);
     } catch (err) {
       showToast(err.response?.data?.detail || "Failed to update profile", "error");
     } finally {
@@ -186,8 +190,8 @@ export default function Profile() {
                   </div>
                 </div>
               ) : (
-                <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: user.bio ? "var(--text-secondary)" : "var(--text-muted)", fontStyle: user.bio ? "normal" : "italic", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
-                  {user.bio || "No bio yet. Click Edit Profile to add one!"}
+                <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: profileData.bio ? "var(--text-secondary)" : "var(--text-muted)", fontStyle: profileData.bio ? "normal" : "italic", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
+                  {profileData.bio || "No bio yet. Click Edit Profile to add one!"}
                 </p>
               )}
             </div>
@@ -216,8 +220,9 @@ export default function Profile() {
                 { label: "Username", value: user.username || user.name },
                 { label: "Email", value: user.email || "Not set" },
                 { label: "Role", value: user.role, accent: true },
-                { label: "Year", value: user.year ? `Year ${user.year}` : "Not set" },
-                { label: "Major", value: user.major || "Not set" },
+                { label: "Year", value: profileData.year ? `Year ${profileData.year}` : "Not set" },
+                { label: "Major", value: profileData.major || "Not set" },
+                { label: "Expertise", value: profileData.expertise || "Not set" },
                 { label: "Status", value: "Active", green: true },
               ].map((item, i, arr) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 0", borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
