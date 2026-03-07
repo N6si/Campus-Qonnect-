@@ -9,7 +9,6 @@ from pymongo import MongoClient
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from bson import ObjectId
-from routes import clubs_router
 
 # --- MongoDB setup ---
 MONGODB_URL = os.environ.get(
@@ -150,7 +149,6 @@ def require_role(allowed_roles: List[str]):
 # --- App ---
 app = FastAPI(title="CampusConnect API")
 
-app.include_router(clubs_router.router)
 
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 app.add_middleware(
