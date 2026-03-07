@@ -1,6 +1,5 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import API from "../../lib/api";
-import { AuthContext } from "../../context/AuthContext";
 import { Check, ArrowRight, Sparkles, Users, BookOpen, Code, Brain, Music, Palette, Globe } from "lucide-react";
 
 const INTERESTS = [
@@ -16,15 +15,13 @@ const INTERESTS = [
 
 const STEPS = ["Welcome", "Interests", "Goals"];
 
-export default function Onboarding({ onComplete }) {
-  const { refreshUser } = useContext(AuthContext); // FIX: get refreshUser from context
+export default function Onboarding({ onComplete, user }) {
   const [step, setStep] = useState(0);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [goal, setGoal] = useState("");
   const [year, setYear] = useState("");
   const [major, setMajor] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   const toggleInterest = (id) => {
     setSelectedInterests(prev =>
@@ -34,26 +31,18 @@ export default function Onboarding({ onComplete }) {
 
   const finish = async () => {
     setSaving(true);
-    setError("");
     try {
-      const payload = {
-        interests: selectedInterests,
-        goal: goal || null,
-        ...(major && { major }),
-        ...(year && { year: parseInt(year) }),
-      };
-
-      await API.put("/api/profile", payload);
-
-      // FIX: refresh user in context so Profile page shows updated data immediately
-      await refreshUser();
-
-      onComplete();
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.detail || "Failed to save profile. Please try again.");
-    } finally {
+      const payload = {};
+      if (major) payload.major = major;
+      if (year) payload.year = parseInt(year);
+      if (selectedInterests.length > 0) payload.bio = `Interested in: ${selectedInterests.map(id => INTERESTS.find(i => i.id === id)?.label).join(", ")}`;
+      if (Object.keys(payload).length > 0) {
+        await API.put("/api/profile", payload);
+      }
+    } catch (err) { console.error(err); }
+    finally {
       setSaving(false);
+      onComplete();
     }
   };
 
@@ -94,8 +83,7 @@ export default function Onboarding({ onComplete }) {
                     background: i < step ? "var(--accent)" : i === step ? "var(--accent-soft)" : "var(--bg-secondary)",
                     border: `1px solid ${i <= step ? "var(--accent)" : "var(--border)"}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "0.65rem", fontWeight: 700,
-                    color: i < step ? "#0a0c14" : i === step ? "var(--accent)" : "var(--text-muted)",
+                    fontSize: "0.65rem", fontWeight: 700, color: i < step ? "#0a0c14" : i === step ? "var(--accent)" : "var(--text-muted)",
                   }}>
                     {i < step ? <Check size={11} /> : i + 1}
                   </div>
@@ -250,18 +238,11 @@ export default function Onboarding({ onComplete }) {
                   ✅ {selectedInterests.length} interests selected
                   {major && ` • ${major}`}
                   {year && ` • Year ${year}`}
-                  {goal && ` • Goal: ${goal}`}
                 </div>
                 <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
                   Your profile is ready to go! You can update these anytime in Profile Settings.
                 </div>
               </div>
-
-              {error && (
-                <div style={{ padding: "0.75rem 1rem", background: "#ff000015", border: "1px solid #ff000040", borderRadius: "0.5rem", color: "#ff6b6b", fontSize: "0.8rem", marginBottom: "1rem" }}>
-                  {error}
-                </div>
-              )}
 
               <div style={{ display: "flex", gap: "0.625rem" }}>
                 <button onClick={() => setStep(1)} className="btn-ghost" style={{ flex: 1, padding: "0.75rem" }}>Back</button>
