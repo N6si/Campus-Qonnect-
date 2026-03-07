@@ -349,20 +349,24 @@ class AIRequest(BaseModel):
 @app.post("/api/ai/chat")
 def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
     import urllib.request
+    import urllib.error
     import json as json_lib
+    
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    print(f"[AI] Key present: {bool(anthropic_key)}, Key starts: {anthropic_key[:8] if anthropic_key else 'MISSING'}")
+    
     if not anthropic_key:
-        raise HTTPException(status_code=500, detail="AI service not configured. Add ANTHROPIC_API_KEY to environment variables.")
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set in environment variables on Render.")
     
     try:
         payload = json_lib.dumps({
             "model": "claude-sonnet-4-20250514",
             "max_tokens": 1000,
-            "system": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. Help students with academic questions, coding problems, concepts, and learning. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging. Use examples when helpful. Format code with markdown. Keep responses educational.",
+            "system": f"You are a helpful AI Study Assistant for CampusConnect. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging.",
             "messages": [{"role": m.role, "content": m.content} for m in req.messages],
         }).encode("utf-8")
 
-        request = urllib.request.Request(
+        http_req = urllib.request.Request(
             "https://api.anthropic.com/v1/messages",
             data=payload,
             headers={
@@ -372,12 +376,17 @@ def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
             },
             method="POST"
         )
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(http_req, timeout=30) as response:
             data = json_lib.loads(response.read().decode("utf-8"))
             reply = data.get("content", [{}])[0].get("text", "Sorry, I couldn't process that.")
             return {"reply": reply}
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8")
+        print(f"[AI] Anthropic HTTP error {e.code}: {body}")
+        raise HTTPException(status_code=500, detail=f"Anthropic error {e.code}: {body}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[AI] Unexpected error: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 
 @app.get("/api/users/all")
