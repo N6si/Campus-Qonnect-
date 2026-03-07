@@ -42,6 +42,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     role: str
+    email: Optional[str] = None  # FIX: added email
     bio: Optional[str] = None
     profile_picture: Optional[str] = None
     year: Optional[int] = None
@@ -62,14 +63,14 @@ class UserOut(BaseModel):
     major: Optional[str] = None
     expertise: Optional[str] = None
 
-# ✅ FIX 1: Added interests and goal to UserUpdate
+# FIX: Added interests and goal
 class UserUpdate(BaseModel):
     bio: Optional[str] = None
     year: Optional[int] = None
     major: Optional[str] = None
     expertise: Optional[str] = None
-    interests: Optional[List[str]] = None  # e.g. ["ai", "web", "cs"]
-    goal: Optional[str] = None             # e.g. "mentor", "network", "learn", "projects"
+    interests: Optional[List[str]] = None
+    goal: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str
@@ -104,7 +105,7 @@ class MentorRequestIn(BaseModel):
     message: Optional[str] = ""
 
 class MentorRequestAction(BaseModel):
-    action: str  # "accept" or "reject"
+    action: str
 
 class MessageIn(BaseModel):
     to_username: str
@@ -180,13 +181,14 @@ def signup(user: UserCreate):
         "username": user.username,
         "password_hash": hashed_pw,
         "role": user.role,
+        "email": user.email,       # FIX: save email
         "bio": user.bio,
         "profile_picture": user.profile_picture,
         "year": user.year,
         "major": user.major,
         "expertise": user.expertise,
-        "interests": [],    # ✅ FIX: initialize empty on signup
-        "goal": None,       # ✅ FIX: initialize empty on signup
+        "interests": [],            # FIX: initialize
+        "goal": None,               # FIX: initialize
     })
     return UserOut(id=str(result.inserted_id), username=user.username, role=user.role, bio=user.bio, profile_picture=user.profile_picture, year=user.year, major=user.major, expertise=user.expertise)
 
@@ -209,24 +211,21 @@ def get_profile(current_user=Depends(get_current_user)):
         "year": current_user.get("year"),
         "major": current_user.get("major"),
         "expertise": current_user.get("expertise"),
-        "email": current_user.get("email"),
-        "interests": current_user.get("interests", []),  # ✅ FIX 2: return interests
-        "goal": current_user.get("goal"),                # ✅ FIX 2: return goal
+        "email": current_user.get("email"),         # FIX: return email
+        "interests": current_user.get("interests", []),
+        "goal": current_user.get("goal"),
     }
 
 @app.put("/api/profile")
 def update_profile(update: UserUpdate, current_user=Depends(get_current_user)):
-    # ✅ FIX 3: Allow interests=[] (empty list) to be saved too
     update_data = {}
     for k, v in update.dict().items():
         if v is not None:
             update_data[k] = v
         elif k == "interests" and v == []:
             update_data[k] = v
-
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
-
     users_collection.update_one({"username": current_user["username"]}, {"$set": update_data})
     updated = users_collection.find_one({"username": current_user["username"]})
     return {
@@ -237,8 +236,8 @@ def update_profile(update: UserUpdate, current_user=Depends(get_current_user)):
         "year": updated.get("year"),
         "major": updated.get("major"),
         "expertise": updated.get("expertise"),
-        "interests": updated.get("interests", []),  # ✅ FIX 3: return interests
-        "goal": updated.get("goal"),                # ✅ FIX 3: return goal
+        "interests": updated.get("interests", []),
+        "goal": updated.get("goal"),
     }
 
 # --- Teachers ---
@@ -370,13 +369,11 @@ def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
     import json as json_lib
 
     groq_key = os.environ.get("GROQ_API_KEY", "")
-    print(f"[AI] Groq key present: {bool(groq_key)}", flush=True)
-
     if not groq_key:
         raise HTTPException(status_code=500, detail="GROQ_API_KEY not set in Render environment variables.")
 
     try:
-        messages = [{"role": "system", "content": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. Help students with academic questions, coding problems, concepts, and learning. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging. Use examples when helpful. Keep responses educational."}]
+        messages = [{"role": "system", "content": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging."}]
         for m in req.messages:
             messages.append({"role": m.role, "content": m.content})
 
@@ -390,26 +387,17 @@ def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
         http_req = urllib.request.Request(
             "https://api.groq.com/openai/v1/chat/completions",
             data=payload,
-            headers={
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json",
-            },
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
             method="POST"
         )
-        print("[AI] Sending request to Groq...", flush=True)
         with urllib.request.urlopen(http_req, timeout=30) as response:
             data = json_lib.loads(response.read().decode("utf-8"))
-            reply = data["choices"][0]["message"]["content"]
-            print(f"[AI] Groq success! Reply length: {len(reply)}", flush=True)
-            return {"reply": reply}
+            return {"reply": data["choices"][0]["message"]["content"]}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
-        print(f"[AI] Groq HTTP error {e.code}: {body}", flush=True)
         raise HTTPException(status_code=500, detail=f"Groq error {e.code}: {body}")
     except Exception as e:
-        print(f"[AI] Unexpected error: {type(e).__name__}: {e}", flush=True)
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
-
 
 @app.get("/api/users/all")
 def get_all_users(current_user=Depends(get_current_user)):
