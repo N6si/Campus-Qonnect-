@@ -291,7 +291,7 @@ export default function Messages() {
 
             {/* RIGHT — Chat */}
             {activeChat ? (
-              <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
                 {/* Chat header */}
                 <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                   <div style={{ width: "36px", height: "36px", borderRadius: "9999px", background: `${ROLE_COLORS[activeChatUser?.role] || "var(--accent)"}20`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: ROLE_COLORS[activeChatUser?.role] || "var(--accent)" }}>
@@ -306,7 +306,7 @@ export default function Messages() {
                 </div>
 
                 {/* Messages */}
-                <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {messages.length === 0 && (
                     <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)", fontSize: "0.875rem" }}>
                       <MessageSquare size={32} style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.3 }} />
