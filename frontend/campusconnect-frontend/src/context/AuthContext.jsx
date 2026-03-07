@@ -1,28 +1,56 @@
 import { createContext, useState, useEffect } from "react";
 import API from "../lib/api";
-// Create Context
+
 export const AuthContext = createContext();
-// AuthProvider Component
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Load token/user from localStorage on mount and parse token payload
+
+  const fetchAndSetProfile = async (baseUser) => {
+    try {
+      const res = await API.get("/api/profile");
+      const profile = res.data;
+      const fullUser = {
+        ...baseUser,
+        bio: profile.bio,
+        year: profile.year,
+        major: profile.major,
+        expertise: profile.expertise,
+        email: profile.email,
+        interests: profile.interests || [],
+        goal: profile.goal,
+      };
+      setUser(fullUser);
+      localStorage.setItem("user", JSON.stringify(fullUser));
+      return fullUser;
+    } catch (err) {
+      setUser(baseUser);
+      localStorage.setItem("user", JSON.stringify(baseUser));
+      return baseUser;
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       const payload = parseJwt(token);
       if (payload) {
-        const u = { username: payload.sub || payload.username || payload.email, role: payload.role };
-        setUser(u);
-        localStorage.setItem("user", JSON.stringify(u));
+        const baseUser = {
+          username: payload.sub || payload.username || payload.email,
+          role: payload.role,
+        };
+        fetchAndSetProfile(baseUser).finally(() => setLoading(false));
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
-  // Login: call backend /login, store token and parse payload for user
+
   const login = async ({ username, password }) => {
     setLoading(true);
     try {
@@ -31,10 +59,12 @@ export const AuthProvider = ({ children }) => {
       if (!token) throw new Error("No token received");
       localStorage.setItem("token", token);
       const payload = parseJwt(token);
-      const u = { username: payload?.sub || payload?.username, role: payload?.role };
-      setUser(u);
-      localStorage.setItem("user", JSON.stringify(u));
-      return u;
+      const baseUser = {
+        username: payload?.sub || payload?.username,
+        role: payload?.role,
+      };
+      const fullUser = await fetchAndSetProfile(baseUser);
+      return fullUser;
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);
       throw err;
@@ -42,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  // Signup: call backend /signup
+
   const signup = async ({ username, password, role, bio, year, major, expertise }) => {
     setLoading(true);
     try {
@@ -55,23 +85,37 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  // Logout Function
+
+  const refreshUser = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const payload = parseJwt(token);
+    if (!payload) return;
+    const baseUser = {
+      username: payload.sub || payload.username || payload.email,
+      role: payload.role,
+    };
+    return await fetchAndSetProfile(baseUser);
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
   };
-  // Helper: parse JWT payload (no verification) to extract claims
+
   function parseJwt(token) {
     try {
-      const payload = token.split('.')[1];
+      const payload = token.split(".")[1];
       const decoded = JSON.parse(atob(payload));
       return decoded;
-    } catch (err) { return null; }
+    } catch (err) {
+      return null;
+    }
   }
-  // Context Value
+
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, login, signup, logout, loading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
