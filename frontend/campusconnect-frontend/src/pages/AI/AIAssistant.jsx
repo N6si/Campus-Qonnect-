@@ -66,7 +66,7 @@ export default function AIAssistant() {
           "X-Title": "CampusConnect AI Assistant",
         },
         body: JSON.stringify({
-          model: "meta-llama/llama-3.2-3b-instruct:free",
+          model: "openrouter/auto",
           messages: [
             {
               role: "system",
