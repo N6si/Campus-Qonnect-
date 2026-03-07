@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Rss, User, Users } from "lucide-react";
+import { LayoutDashboard, Rss, User, Users, Bot, MessageSquare } from "lucide-react";
 
 export default function Sidebar({ className = "", user }) {
   const location = useLocation();
@@ -10,6 +10,8 @@ export default function Sidebar({ className = "", user }) {
     { name: "Feed", path: "/feed", icon: <Rss size={16} /> },
     { name: "Profile", path: "/profile", icon: <User size={16} /> },
     { name: "Mentor Requests", path: "/mentor/requests", icon: <Users size={16} /> },
+    { name: "Messages", path: "/messages", icon: <MessageSquare size={16} /> },
+    { name: "AI Assistant", path: "/ai-assistant", icon: <Bot size={16} />, highlight: true },
   ];
 
   return (
@@ -32,48 +34,20 @@ export default function Sidebar({ className = "", user }) {
             <img
               src={`https://ui-avatars.com/api/?name=${user?.username || user?.name || "U"}&background=f5a623&color=0a0c14&bold=true&size=40`}
               alt="avatar"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "9999px",
-                objectFit: "cover",
-              }}
+              style={{ width: "40px", height: "40px", borderRadius: "9999px", objectFit: "cover" }}
             />
             <span className="status-online" />
           </div>
           <div>
-            <div
-              style={{
-                fontFamily: "Syne, sans-serif",
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                color: "var(--text-primary)",
-                lineHeight: 1.2,
-              }}
-            >
+            <div style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.875rem", color: "var(--text-primary)", lineHeight: 1.2 }}>
               {user?.username || user?.name || "User"}
             </div>
-            <div
-              style={{
-                fontSize: "0.7rem",
-                color: "var(--text-muted)",
-                textTransform: "capitalize",
-                marginTop: "2px",
-              }}
-            >
+            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "capitalize", marginTop: "2px" }}>
               {user?.role || "student"}
             </div>
           </div>
         </div>
-        <div
-          style={{
-            marginTop: "0.875rem",
-            paddingTop: "0.875rem",
-            borderTop: "1px solid var(--border)",
-            fontSize: "0.7rem",
-            color: "var(--text-muted)",
-          }}
-        >
+        <div style={{ marginTop: "0.875rem", paddingTop: "0.875rem", borderTop: "1px solid var(--border)", fontSize: "0.7rem", color: "var(--text-muted)" }}>
           CampusConnect · Student Life
         </div>
       </div>
@@ -82,6 +56,7 @@ export default function Sidebar({ className = "", user }) {
       <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
         {links.map((link) => {
           const isActive = location.pathname === link.path;
+          const isHighlight = link.highlight;
           return (
             <Link
               key={link.name}
@@ -94,29 +69,38 @@ export default function Sidebar({ className = "", user }) {
                 borderRadius: "0.5rem",
                 fontSize: "0.8125rem",
                 fontWeight: 500,
-                color: isActive ? "var(--accent)" : "var(--text-secondary)",
-                background: isActive ? "var(--accent-soft)" : "transparent",
-                border: isActive ? "1px solid rgba(245,166,35,0.15)" : "1px solid transparent",
+                color: isActive ? "var(--accent)" : isHighlight ? "var(--purple)" : "var(--text-secondary)",
+                background: isActive ? "var(--accent-soft)" : isHighlight ? "rgba(167,139,250,0.08)" : "transparent",
+                border: isActive
+                  ? "1px solid rgba(245,166,35,0.15)"
+                  : isHighlight
+                  ? "1px solid rgba(167,139,250,0.15)"
+                  : "1px solid transparent",
                 textDecoration: "none",
                 transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.color = "var(--text-primary)";
-                  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  e.currentTarget.style.color = isHighlight ? "var(--purple)" : "var(--text-primary)";
+                  e.currentTarget.style.background = isHighlight ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.color = "var(--text-secondary)";
-                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = isHighlight ? "var(--purple)" : "var(--text-secondary)";
+                  e.currentTarget.style.background = isHighlight ? "rgba(167,139,250,0.08)" : "transparent";
                 }
               }}
             >
-              <span style={{ color: isActive ? "var(--accent)" : "var(--text-muted)" }}>
+              <span style={{ color: isActive ? "var(--accent)" : isHighlight ? "var(--purple)" : "var(--text-muted)" }}>
                 {link.icon}
               </span>
               {link.name}
+              {isHighlight && (
+                <span style={{ marginLeft: "auto", fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "0.25rem", background: "rgba(167,139,250,0.15)", color: "var(--purple)", fontWeight: 700 }}>
+                  AI
+                </span>
+              )}
             </Link>
           );
         })}
