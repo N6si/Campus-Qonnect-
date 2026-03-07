@@ -22,6 +22,7 @@ export default function Onboarding({ onComplete, user }) {
   const [year, setYear] = useState("");
   const [major, setMajor] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const toggleInterest = (id) => {
     setSelectedInterests(prev =>
@@ -31,18 +32,26 @@ export default function Onboarding({ onComplete, user }) {
 
   const finish = async () => {
     setSaving(true);
+    setError("");
     try {
-      const payload = {};
-      if (major) payload.major = major;
-      if (year) payload.year = parseInt(year);
-      if (selectedInterests.length > 0) payload.bio = `Interested in: ${selectedInterests.map(id => INTERESTS.find(i => i.id === id)?.label).join(", ")}`;
-      if (Object.keys(payload).length > 0) {
-        await API.put("/api/profile", payload);
-      }
-    } catch (err) { console.error(err); }
-    finally {
-      setSaving(false);
+      // FIX: Build a complete payload with ALL fields properly typed
+      const payload = {
+        // Always send interests as a real array (not squashed into bio)
+        interests: selectedInterests,
+        // Send goal as its own field so it's queryable in MongoDB
+        goal: goal || null,
+        // Only include optional fields if filled in
+        ...(major && { major }),
+        ...(year && { year: parseInt(year) }),
+      };
+
+      await API.put("/api/profile", payload);
       onComplete();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.detail || "Failed to save profile. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -238,11 +247,19 @@ export default function Onboarding({ onComplete, user }) {
                   ✅ {selectedInterests.length} interests selected
                   {major && ` • ${major}`}
                   {year && ` • Year ${year}`}
+                  {goal && ` • Goal: ${goal}`}
                 </div>
                 <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
                   Your profile is ready to go! You can update these anytime in Profile Settings.
                 </div>
               </div>
+
+              {/* FIX: Show error if save fails */}
+              {error && (
+                <div style={{ padding: "0.75rem 1rem", background: "#ff000015", border: "1px solid #ff000040", borderRadius: "0.5rem", color: "#ff6b6b", fontSize: "0.8rem", marginBottom: "1rem" }}>
+                  {error}
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: "0.625rem" }}>
                 <button onClick={() => setStep(1)} className="btn-ghost" style={{ flex: 1, padding: "0.75rem" }}>Back</button>
