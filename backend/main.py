@@ -352,50 +352,43 @@ def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
     import urllib.error
     import json as json_lib
 
-    gemini_key = os.environ.get("GEMINI_API_KEY", "")
-    print(f"[AI] Gemini key present: {bool(gemini_key)}", flush=True)
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    print(f"[AI] Groq key present: {bool(groq_key)}", flush=True)
 
-    if not gemini_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in Render environment variables.")
+    if not groq_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not set in Render environment variables.")
 
     try:
-        # Build conversation history for Gemini
-        parts_history = []
+        messages = [{"role": "system", "content": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. Help students with academic questions, coding problems, concepts, and learning. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging. Use examples when helpful. Keep responses educational."}]
         for m in req.messages:
-            role = "user" if m.role == "user" else "model"
-            parts_history.append({
-                "role": role,
-                "parts": [{"text": m.content}]
-            })
+            messages.append({"role": m.role, "content": m.content})
 
         payload = json_lib.dumps({
-            "system_instruction": {
-                "parts": [{"text": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. Help students with academic questions, coding problems, concepts, and learning. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging. Use examples when helpful. Keep responses educational."}]
-            },
-            "contents": parts_history,
-            "generationConfig": {
-                "maxOutputTokens": 1000,
-                "temperature": 0.7,
-            }
+            "model": "llama-3.3-70b-versatile",
+            "messages": messages,
+            "max_tokens": 1000,
+            "temperature": 0.7,
         }).encode("utf-8")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
         http_req = urllib.request.Request(
-            url,
+            "https://api.groq.com/openai/v1/chat/completions",
             data=payload,
-            headers={"content-type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json",
+            },
             method="POST"
         )
-        print("[AI] Sending request to Gemini...", flush=True)
+        print("[AI] Sending request to Groq...", flush=True)
         with urllib.request.urlopen(http_req, timeout=30) as response:
             data = json_lib.loads(response.read().decode("utf-8"))
-            reply = data["candidates"][0]["content"]["parts"][0]["text"]
-            print(f"[AI] Gemini success! Reply length: {len(reply)}", flush=True)
+            reply = data["choices"][0]["message"]["content"]
+            print(f"[AI] Groq success! Reply length: {len(reply)}", flush=True)
             return {"reply": reply}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
-        print(f"[AI] Gemini HTTP error {e.code}: {body}", flush=True)
-        raise HTTPException(status_code=500, detail=f"Gemini error {e.code}: {body}")
+        print(f"[AI] Groq HTTP error {e.code}: {body}", flush=True)
+        raise HTTPException(status_code=500, detail=f"Groq error {e.code}: {body}")
     except Exception as e:
         print(f"[AI] Unexpected error: {type(e).__name__}: {e}", flush=True)
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
