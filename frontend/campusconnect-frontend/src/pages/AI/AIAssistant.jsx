@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
+import API from "../../lib/api";
 import { AuthContext } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar";
 import Sidebar from "../../components/Sidebar";
@@ -55,23 +56,12 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are a helpful AI Study Assistant for CampusConnect, a college social platform. 
-You help students with academic questions, coding problems, concepts, and learning.
-The student's name is ${user?.username || "Student"} and their role is ${user?.role || "student"}.
-Be concise, clear, and encouraging. Use examples when helpful. 
-Format code blocks with proper markdown. Keep responses focused and educational.`,
-          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-        }),
+      const response = await API.post("/api/ai/chat", {
+        messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+        username: user?.username || "Student",
+        role: user?.role || "student",
       });
-
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || "Sorry, I couldn't process that. Please try again.";
+      const reply = response.data?.reply || "Sorry, I couldn't process that. Please try again.";
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
       setMessages(prev => [...prev, {
