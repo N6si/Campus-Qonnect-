@@ -207,44 +207,85 @@ export default function Messages() {
                 </div>
               )}
 
-              {/* Conversation list */}
+              {/* Conversation list + All Users */}
               <div style={{ flex: 1, overflowY: "auto" }}>
-                {filteredConvos.length === 0 ? (
+                {/* Active conversations first */}
+                {filteredConvos.length > 0 && (
+                  <>
+                    <div style={{ padding: "0.5rem 1.25rem 0.25rem", fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      Recent
+                    </div>
+                    {filteredConvos.map(c => {
+                      const isActive = activeChat === c.username;
+                      const chatUser = allUsers.find(u => u.username === c.username);
+                      return (
+                        <button key={c.username} onClick={() => openChat(c.username)}
+                          style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1.25rem", background: isActive ? "var(--accent-soft)" : "transparent", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", textAlign: "left", transition: "background 0.15s", fontFamily: "DM Sans, sans-serif" }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--bg-secondary)"; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div style={{ width: "38px", height: "38px", borderRadius: "9999px", background: `${ROLE_COLORS[chatUser?.role] || "var(--accent)"}20`, border: `1px solid ${ROLE_COLORS[chatUser?.role] || "var(--accent)"}30`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: ROLE_COLORS[chatUser?.role] || "var(--accent)", flexShrink: 0 }}>
+                            {getInitials(c.username)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: "0.875rem", fontWeight: 600, color: isActive ? "var(--accent)" : "var(--text-primary)" }}>{c.username}</span>
+                              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>{timeAgo(c.last_time)}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.1rem" }}>
+                              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "150px" }}>
+                                {c.last_message || "Start a conversation"}
+                              </span>
+                              {c.unread > 0 && (
+                                <span style={{ minWidth: "18px", height: "18px", borderRadius: "9999px", background: "var(--accent)", color: "#0a0c14", fontSize: "0.65rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", flexShrink: 0 }}>
+                                  {c.unread}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* All other users */}
+                {allUsers.filter(u => !conversations.find(c => c.username === u.username) && u.username.toLowerCase().includes(search.toLowerCase())).length > 0 && (
+                  <>
+                    <div style={{ padding: "0.5rem 1.25rem 0.25rem", fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      All Users
+                    </div>
+                    {allUsers
+                      .filter(u => !conversations.find(c => c.username === u.username) && u.username.toLowerCase().includes(search.toLowerCase()))
+                      .map(u => {
+                        const isActive = activeChat === u.username;
+                        return (
+                          <button key={u.username} onClick={() => openChat(u.username)}
+                            style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1.25rem", background: isActive ? "var(--accent-soft)" : "transparent", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", textAlign: "left", transition: "background 0.15s", fontFamily: "DM Sans, sans-serif" }}
+                            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--bg-secondary)"; }}
+                            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                          >
+                            <div style={{ width: "38px", height: "38px", borderRadius: "9999px", background: `${ROLE_COLORS[u.role] || "var(--accent)"}20`, border: `1px solid ${ROLE_COLORS[u.role] || "var(--accent)"}30`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: ROLE_COLORS[u.role] || "var(--accent)", flexShrink: 0 }}>
+                              {getInitials(u.username)}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: "0.875rem", fontWeight: 600, color: isActive ? "var(--accent)" : "var(--text-primary)" }}>{u.username}</div>
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "capitalize" }}>
+                                {u.role}{u.expertise ? ` • ${u.expertise}` : ""}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </>
+                )}
+
+                {filteredConvos.length === 0 && allUsers.filter(u => u.username.toLowerCase().includes(search.toLowerCase())).length === 0 && (
                   <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8125rem" }}>
                     <MessageSquare size={28} style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.4 }} />
-                    {search ? "No chats found" : "No messages yet.\nClick + to start a chat!"}
+                    No users found
                   </div>
-                ) : filteredConvos.map(c => {
-                  const isActive = activeChat === c.username;
-                  const chatUser = allUsers.find(u => u.username === c.username);
-                  return (
-                    <button key={c.username} onClick={() => openChat(c.username)}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.875rem 1.25rem", background: isActive ? "var(--accent-soft)" : "transparent", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", textAlign: "left", transition: "background 0.15s", fontFamily: "DM Sans, sans-serif" }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--bg-secondary)"; }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
-                    >
-                      <div style={{ width: "38px", height: "38px", borderRadius: "9999px", background: `${ROLE_COLORS[chatUser?.role] || "var(--accent)"}20`, border: `1px solid ${ROLE_COLORS[chatUser?.role] || "var(--accent)"}30`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: ROLE_COLORS[chatUser?.role] || "var(--accent)", flexShrink: 0 }}>
-                        {getInitials(c.username)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: "0.875rem", fontWeight: 600, color: isActive ? "var(--accent)" : "var(--text-primary)" }}>{c.username}</span>
-                          <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>{timeAgo(c.last_time)}</span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.1rem" }}>
-                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "150px" }}>
-                            {c.last_message || "Start a conversation"}
-                          </span>
-                          {c.unread > 0 && (
-                            <span style={{ minWidth: "18px", height: "18px", borderRadius: "9999px", background: "var(--accent)", color: "#0a0c14", fontSize: "0.65rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", flexShrink: 0 }}>
-                              {c.unread}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                )}
               </div>
             </div>
 
