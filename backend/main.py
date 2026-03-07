@@ -62,11 +62,14 @@ class UserOut(BaseModel):
     major: Optional[str] = None
     expertise: Optional[str] = None
 
+# ✅ FIX 1: Added interests and goal to UserUpdate
 class UserUpdate(BaseModel):
     bio: Optional[str] = None
     year: Optional[int] = None
     major: Optional[str] = None
     expertise: Optional[str] = None
+    interests: Optional[List[str]] = None  # e.g. ["ai", "web", "cs"]
+    goal: Optional[str] = None             # e.g. "mentor", "network", "learn", "projects"
 
 class Token(BaseModel):
     access_token: str
@@ -182,6 +185,8 @@ def signup(user: UserCreate):
         "year": user.year,
         "major": user.major,
         "expertise": user.expertise,
+        "interests": [],    # ✅ FIX: initialize empty on signup
+        "goal": None,       # ✅ FIX: initialize empty on signup
     })
     return UserOut(id=str(result.inserted_id), username=user.username, role=user.role, bio=user.bio, profile_picture=user.profile_picture, year=user.year, major=user.major, expertise=user.expertise)
 
@@ -205,13 +210,23 @@ def get_profile(current_user=Depends(get_current_user)):
         "major": current_user.get("major"),
         "expertise": current_user.get("expertise"),
         "email": current_user.get("email"),
+        "interests": current_user.get("interests", []),  # ✅ FIX 2: return interests
+        "goal": current_user.get("goal"),                # ✅ FIX 2: return goal
     }
 
 @app.put("/api/profile")
 def update_profile(update: UserUpdate, current_user=Depends(get_current_user)):
-    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    # ✅ FIX 3: Allow interests=[] (empty list) to be saved too
+    update_data = {}
+    for k, v in update.dict().items():
+        if v is not None:
+            update_data[k] = v
+        elif k == "interests" and v == []:
+            update_data[k] = v
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
+
     users_collection.update_one({"username": current_user["username"]}, {"$set": update_data})
     updated = users_collection.find_one({"username": current_user["username"]})
     return {
@@ -222,6 +237,8 @@ def update_profile(update: UserUpdate, current_user=Depends(get_current_user)):
         "year": updated.get("year"),
         "major": updated.get("major"),
         "expertise": updated.get("expertise"),
+        "interests": updated.get("interests", []),  # ✅ FIX 3: return interests
+        "goal": updated.get("goal"),                # ✅ FIX 3: return goal
     }
 
 # --- Teachers ---
