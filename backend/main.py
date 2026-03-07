@@ -22,6 +22,7 @@ students_collection = db["students"]
 mentors_collection = db["mentors"]
 posts_collection = db["posts"]
 mentor_requests_collection = db["mentor_requests"]
+messages_collection = db["messages"]
 
 # --- JWT & Password hashing ---
 SECRET_KEY = os.environ.get("SECRET_KEY", "your_secret_key_change_this_in_production")
@@ -102,6 +103,10 @@ class MentorRequestIn(BaseModel):
 class MentorRequestAction(BaseModel):
     action: str  # "accept" or "reject"
 
+class MessageIn(BaseModel):
+    to_username: str
+    content: str
+
 # --- Auth helpers ---
 def get_password_hash(password: str):
     return pwd_context.hash(password[:72])
@@ -148,7 +153,6 @@ def require_role(allowed_roles: List[str]):
 
 # --- App ---
 app = FastAPI(title="CampusConnect API")
-
 
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 app.add_middleware(
@@ -331,3 +335,83 @@ def dashboard_stats(user=Depends(require_role(["admin"]))):
         "posts_count": posts_collection.count_documents({}),
         "mentor_requests": mentor_requests_collection.count_documents({}),
     }
+
+# --- All Users (for messaging) ---
+@app.get("/api/users/all")
+def get_all_users(current_user=Depends(get_current_user)):
+    users = list(users_collection.find({"username": {"$ne": current_user["username"]}}))
+    return [{
+        "username": u["username"],
+        "role": u["role"],
+        "expertise": u.get("expertise", ""),
+        "major": u.get("major", ""),
+    } for u in users]
+
+# --- Messaging ---
+@app.post("/api/messages/send")
+def send_message(msg: MessageIn, current_user=Depends(get_current_user)):
+    if msg.to_username == current_user["username"]:
+        raise HTTPException(status_code=400, detail="Cannot message yourself")
+    recipient = users_collection.find_one({"username": msg.to_username})
+    if not recipient:
+        raise HTTPException(status_code=404, detail="User not found")
+    result = messages_collection.insert_one({
+        "from_username": current_user["username"],
+        "to_username": msg.to_username,
+        "content": msg.content,
+        "created_at": datetime.utcnow(),
+        "read": False,
+    })
+    return {"message": "Sent!", "id": str(result.inserted_id)}
+
+@app.get("/api/messages/unread/count")
+def unread_count(current_user=Depends(get_current_user)):
+    count = messages_collection.count_documents({
+        "to_username": current_user["username"],
+        "read": False
+    })
+    return {"count": count}
+
+@app.get("/api/messages/conversations")
+def get_conversations(current_user=Depends(get_current_user)):
+    username = current_user["username"]
+    pipeline = [
+        {"$match": {"$or": [{"from_username": username}, {"to_username": username}]}},
+        {"$sort": {"created_at": -1}},
+        {"$group": {
+            "_id": {"$cond": [{"$eq": ["$from_username", username]}, "$to_username", "$from_username"]},
+            "last_message": {"$first": "$content"},
+            "last_time": {"$first": "$created_at"},
+            "unread": {"$sum": {"$cond": [{"$and": [{"$eq": ["$to_username", username]}, {"$eq": ["$read", False]}]}, 1, 0]}}
+        }},
+        {"$sort": {"last_time": -1}}
+    ]
+    convos = list(messages_collection.aggregate(pipeline))
+    return [{
+        "username": c["_id"],
+        "last_message": c["last_message"],
+        "last_time": c["last_time"].isoformat() if c.get("last_time") else "",
+        "unread": c["unread"],
+    } for c in convos]
+
+@app.get("/api/messages/{other_username}")
+def get_messages(other_username: str, current_user=Depends(get_current_user)):
+    username = current_user["username"]
+    msgs = list(messages_collection.find({
+        "$or": [
+            {"from_username": username, "to_username": other_username},
+            {"from_username": other_username, "to_username": username},
+        ]
+    }).sort("created_at", 1))
+    messages_collection.update_many(
+        {"from_username": other_username, "to_username": username, "read": False},
+        {"$set": {"read": True}}
+    )
+    return [{
+        "id": str(m["_id"]),
+        "from_username": m["from_username"],
+        "to_username": m["to_username"],
+        "content": m["content"],
+        "created_at": m["created_at"].isoformat(),
+        "read": m.get("read", False),
+    } for m in msgs]
