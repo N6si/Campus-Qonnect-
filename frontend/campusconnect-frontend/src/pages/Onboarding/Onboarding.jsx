@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import API from "../../lib/api";
+import { AuthContext } from "../../context/AuthContext";
 import { Check, ArrowRight, Sparkles, Users, BookOpen, Code, Brain, Music, Palette, Globe } from "lucide-react";
 
 const INTERESTS = [
@@ -15,7 +16,8 @@ const INTERESTS = [
 
 const STEPS = ["Welcome", "Interests", "Goals"];
 
-export default function Onboarding({ onComplete, user }) {
+export default function Onboarding({ onComplete }) {
+  const { refreshUser } = useContext(AuthContext); // FIX: get refreshUser from context
   const [step, setStep] = useState(0);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [goal, setGoal] = useState("");
@@ -34,18 +36,18 @@ export default function Onboarding({ onComplete, user }) {
     setSaving(true);
     setError("");
     try {
-      // FIX: Build a complete payload with ALL fields properly typed
       const payload = {
-        // Always send interests as a real array (not squashed into bio)
         interests: selectedInterests,
-        // Send goal as its own field so it's queryable in MongoDB
         goal: goal || null,
-        // Only include optional fields if filled in
         ...(major && { major }),
         ...(year && { year: parseInt(year) }),
       };
 
       await API.put("/api/profile", payload);
+
+      // FIX: refresh user in context so Profile page shows updated data immediately
+      await refreshUser();
+
       onComplete();
     } catch (err) {
       console.error(err);
@@ -92,7 +94,8 @@ export default function Onboarding({ onComplete, user }) {
                     background: i < step ? "var(--accent)" : i === step ? "var(--accent-soft)" : "var(--bg-secondary)",
                     border: `1px solid ${i <= step ? "var(--accent)" : "var(--border)"}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "0.65rem", fontWeight: 700, color: i < step ? "#0a0c14" : i === step ? "var(--accent)" : "var(--text-muted)",
+                    fontSize: "0.65rem", fontWeight: 700,
+                    color: i < step ? "#0a0c14" : i === step ? "var(--accent)" : "var(--text-muted)",
                   }}>
                     {i < step ? <Check size={11} /> : i + 1}
                   </div>
@@ -254,7 +257,6 @@ export default function Onboarding({ onComplete, user }) {
                 </div>
               </div>
 
-              {/* FIX: Show error if save fails */}
               {error && (
                 <div style={{ padding: "0.75rem 1rem", background: "#ff000015", border: "1px solid #ff000040", borderRadius: "0.5rem", color: "#ff6b6b", fontSize: "0.8rem", marginBottom: "1rem" }}>
                   {error}
