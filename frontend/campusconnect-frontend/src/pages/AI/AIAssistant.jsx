@@ -14,7 +14,6 @@ const SUGGESTED_QUESTIONS = [
   { icon: <Lightbulb size={14} />, text: "Tips for a good software engineering project" },
 ];
 
-
 function TypingDots() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.75rem 1rem" }}>
@@ -67,7 +66,7 @@ export default function AIAssistant() {
           "X-Title": "CampusConnect AI Assistant",
         },
         body: JSON.stringify({
-          model: "mistralai/mistral-7b-instruct:free",
+          model: "meta-llama/llama-3.2-3b-instruct:free",
           messages: [
             {
               role: "system",
@@ -281,4 +280,3 @@ export default function AIAssistant() {
     </div>
   );
 }
-
