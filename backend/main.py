@@ -351,41 +351,53 @@ def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
     import urllib.request
     import urllib.error
     import json as json_lib
-    
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    print(f"[AI] Key present: {bool(anthropic_key)}, Key starts: {anthropic_key[:8] if anthropic_key else 'MISSING'}")
-    
-    if not anthropic_key:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set in environment variables on Render.")
-    
+
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    print(f"[AI] Gemini key present: {bool(gemini_key)}", flush=True)
+
+    if not gemini_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in Render environment variables.")
+
     try:
+        # Build conversation history for Gemini
+        parts_history = []
+        for m in req.messages:
+            role = "user" if m.role == "user" else "model"
+            parts_history.append({
+                "role": role,
+                "parts": [{"text": m.content}]
+            })
+
         payload = json_lib.dumps({
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 1000,
-            "system": f"You are a helpful AI Study Assistant for CampusConnect. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging.",
-            "messages": [{"role": m.role, "content": m.content} for m in req.messages],
+            "system_instruction": {
+                "parts": [{"text": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. Help students with academic questions, coding problems, concepts, and learning. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging. Use examples when helpful. Keep responses educational."}]
+            },
+            "contents": parts_history,
+            "generationConfig": {
+                "maxOutputTokens": 1000,
+                "temperature": 0.7,
+            }
         }).encode("utf-8")
 
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
         http_req = urllib.request.Request(
-            "https://api.anthropic.com/v1/messages",
+            url,
             data=payload,
-            headers={
-                "x-api-key": anthropic_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
+            headers={"content-type": "application/json"},
             method="POST"
         )
+        print("[AI] Sending request to Gemini...", flush=True)
         with urllib.request.urlopen(http_req, timeout=30) as response:
             data = json_lib.loads(response.read().decode("utf-8"))
-            reply = data.get("content", [{}])[0].get("text", "Sorry, I couldn't process that.")
+            reply = data["candidates"][0]["content"]["parts"][0]["text"]
+            print(f"[AI] Gemini success! Reply length: {len(reply)}", flush=True)
             return {"reply": reply}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
-        print(f"[AI] Anthropic HTTP error {e.code}: {body}")
-        raise HTTPException(status_code=500, detail=f"Anthropic error {e.code}: {body}")
+        print(f"[AI] Gemini HTTP error {e.code}: {body}", flush=True)
+        raise HTTPException(status_code=500, detail=f"Gemini error {e.code}: {body}")
     except Exception as e:
-        print(f"[AI] Unexpected error: {type(e).__name__}: {e}")
+        print(f"[AI] Unexpected error: {type(e).__name__}: {e}", flush=True)
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 
