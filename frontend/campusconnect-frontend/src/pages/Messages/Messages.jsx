@@ -36,23 +36,34 @@ export default function Messages() {
   const [search, setSearch] = useState("");
   const [showNewChat, setShowNewChat] = useState(false);
   const [userSearch, setUserSearch] = useState("");
-  const [polling, setPolling] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const activeChatRef = useRef(null); // FIX: track activeChat in ref to avoid stale closure
 
   useEffect(() => {
     fetchConversations();
     fetchAllUsers();
   }, []);
 
+  // FIX: Keep ref in sync with state so polling always uses latest value
   useEffect(() => {
-    if (activeChat) {
-      fetchMessages(activeChat);
-      // Poll every 3 seconds for new messages
-      const interval = setInterval(() => fetchMessages(activeChat), 3000);
-      setPolling(interval);
-      return () => clearInterval(interval);
-    }
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
+  useEffect(() => {
+    if (!activeChat) return;
+
+    // Fetch immediately on open
+    fetchMessages(activeChat);
+
+    // FIX: Use ref inside interval so it always reads the latest activeChat
+    const interval = setInterval(() => {
+      if (activeChatRef.current) {
+        fetchMessages(activeChatRef.current);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, [activeChat]);
 
   useEffect(() => {
@@ -77,16 +88,17 @@ export default function Messages() {
     try {
       const res = await API.get(`/api/messages/${username}`);
       setMessages(res.data || []);
-      // Refresh conversations to update unread count
       fetchConversations();
     } catch {}
   };
 
   const openChat = (username) => {
+    // FIX: Clear messages first to prevent flash of old chat's messages
+    setMessages([]);
     setActiveChat(username);
     setShowNewChat(false);
     setSearch("");
-    inputRef.current?.focus();
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const sendMessage = async () => {
@@ -94,7 +106,6 @@ export default function Messages() {
     setSending(true);
     const content = input.trim();
     setInput("");
-    // Optimistically add message
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
       from_username: user.username,
@@ -121,7 +132,6 @@ export default function Messages() {
   };
 
   const startNewChat = (username) => {
-    // Add to conversations if not already there
     if (!conversations.find(c => c.username === username)) {
       setConversations(prev => [{ username, last_message: "", last_time: "", unread: 0 }, ...prev]);
     }
@@ -146,12 +156,24 @@ export default function Messages() {
         <Sidebar user={user} />
 
         <main style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "1rem", overflow: "hidden", display: "grid", gridTemplateColumns: "300px 1fr", height: "calc(100vh - 140px)", minHeight: "500px" }}>
+          {/* FIX: Added overflow:hidden and ensured grid children don't exceed container */}
+          <div style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "1rem",
+            overflow: "hidden",
+            display: "grid",
+            gridTemplateColumns: "300px 1fr",
+            gridTemplateRows: "1fr",        // FIX: explicit row sizing
+            height: "calc(100vh - 140px)",
+            minHeight: "500px",
+          }}>
 
             {/* LEFT — Conversations */}
-            <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
+            {/* FIX: Added overflow:hidden so the inner flex can scroll correctly */}
+            <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
               {/* Header */}
-              <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.875rem" }}>
                   <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "1rem", color: "var(--text-primary)", margin: 0 }}>Messages</h2>
                   <button
@@ -174,7 +196,7 @@ export default function Messages() {
 
               {/* New Chat search */}
               {showNewChat && (
-                <div style={{ padding: "0.75rem", borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
+                <div style={{ padding: "0.75rem", borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)", flexShrink: 0 }}>
                   <div style={{ fontSize: "0.7rem", color: "var(--accent)", fontWeight: 600, marginBottom: "0.5rem", textTransform: "uppercase" }}>Start new chat</div>
                   <input
                     value={userSearch}
@@ -207,9 +229,8 @@ export default function Messages() {
                 </div>
               )}
 
-              {/* Conversation list + All Users */}
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                {/* Active conversations first */}
+              {/* Conversation list + All Users — FIX: flex:1 + minHeight:0 enables proper scroll */}
+              <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
                 {filteredConvos.length > 0 && (
                   <>
                     <div style={{ padding: "0.5rem 1.25rem 0.25rem", fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -249,7 +270,6 @@ export default function Messages() {
                   </>
                 )}
 
-                {/* All other users */}
                 {allUsers.filter(u => !conversations.find(c => c.username === u.username) && u.username.toLowerCase().includes(search.toLowerCase())).length > 0 && (
                   <>
                     <div style={{ padding: "0.5rem 1.25rem 0.25rem", fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -290,10 +310,11 @@ export default function Messages() {
             </div>
 
             {/* RIGHT — Chat */}
+            {/* FIX: Added minHeight:0 and overflow:hidden so flex children scroll correctly inside the grid cell */}
             {activeChat ? (
-              <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+              <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
                 {/* Chat header */}
-                <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
                   <div style={{ width: "36px", height: "36px", borderRadius: "9999px", background: `${ROLE_COLORS[activeChatUser?.role] || "var(--accent)"}20`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: ROLE_COLORS[activeChatUser?.role] || "var(--accent)" }}>
                     {getInitials(activeChat)}
                   </div>
@@ -305,7 +326,7 @@ export default function Messages() {
                   </div>
                 </div>
 
-                {/* Messages */}
+                {/* Messages — FIX: flex:1 + minHeight:0 is the key fix for scroll inside flex/grid */}
                 <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {messages.length === 0 && (
                     <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)", fontSize: "0.875rem" }}>
@@ -315,7 +336,7 @@ export default function Messages() {
                   )}
                   {messages.map((msg, i) => {
                     const isMe = msg.from_username === user.username;
-                    const showTime = i === 0 || (new Date(msg.created_at) - new Date(messages[i-1]?.created_at)) > 300000;
+                    const showTime = i === 0 || (new Date(msg.created_at) - new Date(messages[i - 1]?.created_at)) > 300000;
                     return (
                       <React.Fragment key={msg.id}>
                         {showTime && (
@@ -342,7 +363,7 @@ export default function Messages() {
                 </div>
 
                 {/* Input */}
-                <div style={{ padding: "1rem 1.25rem", borderTop: "1px solid var(--border)", display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
+                <div style={{ padding: "1rem 1.25rem", borderTop: "1px solid var(--border)", display: "flex", gap: "0.75rem", alignItems: "flex-end", flexShrink: 0 }}>
                   <textarea
                     ref={inputRef}
                     value={input}
