@@ -31,8 +31,17 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      // only send fields backend expects
-      await signup({ username: formData.username, password: formData.password, role: formData.role, bio: "", year: null, major: "", expertise: "" });
+      // FIX: send email along with other fields
+      await signup({
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        email: formData.email || null,
+        bio: "",
+        year: null,
+        major: "",
+        expertise: "",
+      });
       setMessage("Signup successful! Redirecting to login...");
       setTimeout(() => navigate("/login"), 900);
     } catch (err) {
