@@ -336,7 +336,46 @@ def dashboard_stats(user=Depends(require_role(["admin"]))):
         "mentor_requests": mentor_requests_collection.count_documents({}),
     }
 
-# --- All Users (for messaging) ---
+# --- AI Assistant Proxy ---
+class AIMessage(BaseModel):
+    role: str
+    content: str
+
+class AIRequest(BaseModel):
+    messages: List[AIMessage]
+    username: Optional[str] = "Student"
+    role: Optional[str] = "student"
+
+@app.post("/api/ai/chat")
+def ai_chat(req: AIRequest, current_user=Depends(get_current_user)):
+    import httpx
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        with httpx.Client(timeout=30) as client:
+            response = client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": anthropic_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 1000,
+                    "system": f"You are a helpful AI Study Assistant for CampusConnect, a college social platform. Help students with academic questions, coding problems, concepts, and learning. The student's name is {req.username} and their role is {req.role}. Be concise, clear, and encouraging. Use examples when helpful. Format code with markdown. Keep responses educational.",
+                    "messages": [{"role": m.role, "content": m.content} for m in req.messages],
+                }
+            )
+            data = response.json()
+            reply = data.get("content", [{}])[0].get("text", "Sorry, I couldn't process that.")
+            return {"reply": reply}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/users/all")
 def get_all_users(current_user=Depends(get_current_user)):
     users = list(users_collection.find({"username": {"$ne": current_user["username"]}}))
