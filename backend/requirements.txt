@@ -23,6 +23,7 @@ pydantic==2.12.3
 pydantic_core==2.41.4
 pymongo==4.15.3
 python-jose==3.5.0
+python-multipart==0.0.20
 rsa==4.9.1
 six==1.17.0
 sniffio==1.3.1
