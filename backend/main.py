@@ -485,6 +485,7 @@ from fastapi import UploadFile, File, Form
 
 question_bank_collection = db["question_bank"]
 
+
 @app.post("/api/question-bank/upload")
 async def upload_question_paper(
     title: str = Form(...),
