@@ -477,3 +477,82 @@ def get_messages(other_username: str, current_user=Depends(get_current_user)):
         "created_at": m["created_at"].isoformat(),
         "read": m.get("read", False),
     } for m in msgs]
+
+
+# --- Question Bank ---
+import base64
+from fastapi import UploadFile, File, Form
+
+question_bank_collection = db["question_bank"]
+
+@app.post("/api/question-bank/upload")
+async def upload_question_paper(
+    title: str = Form(...),
+    subject: str = Form(...),
+    year: str = Form(...),
+    semester: str = Form(""),
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user)
+):
+    if current_user["role"] not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can upload papers")
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="File too large. Max 10MB")
+    encoded = base64.b64encode(contents).decode("utf-8")
+    result = question_bank_collection.insert_one({
+        "title": title,
+        "subject": subject,
+        "year": year,
+        "semester": semester,
+        "uploaded_by": current_user["username"],
+        "file_data": encoded,
+        "filename": file.filename,
+        "created_at": datetime.utcnow(),
+    })
+    return {"message": "Uploaded successfully", "id": str(result.inserted_id)}
+
+@app.get("/api/question-bank")
+def get_question_papers(current_user=Depends(get_current_user)):
+    papers = list(question_bank_collection.find().sort("created_at", -1))
+    return [{
+        "id": str(p["_id"]),
+        "title": p["title"],
+        "subject": p["subject"],
+        "year": p.get("year", ""),
+        "semester": p.get("semester", ""),
+        "uploaded_by": p["uploaded_by"],
+        "created_at": p["created_at"].isoformat() if p.get("created_at") else "",
+    } for p in papers]
+
+@app.get("/api/question-bank/download/{paper_id}")
+def download_question_paper(paper_id: str, current_user=Depends(get_current_user)):
+    from fastapi.responses import Response
+    try:
+        oid = ObjectId(paper_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid paper ID")
+    paper = question_bank_collection.find_one({"_id": oid})
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    file_bytes = base64.b64decode(paper["file_data"])
+    return Response(
+        content=file_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={paper['filename']}"}
+    )
+
+@app.delete("/api/question-bank/{paper_id}")
+def delete_question_paper(paper_id: str, current_user=Depends(get_current_user)):
+    if current_user["role"] not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    try:
+        oid = ObjectId(paper_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid paper ID")
+    result = question_bank_collection.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    return {"message": "Deleted successfully"}
