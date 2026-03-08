@@ -11,7 +11,7 @@ export default function Sidebar({ className = "", user }) {
     { name: "Profile", path: "/profile", icon: <User size={16} /> },
     { name: "Mentor Requests", path: "/mentor/requests", icon: <Users size={16} /> },
     { name: "Messages", path: "/messages", icon: <MessageSquare size={16} /> },
-    { name: "Question Bank", path: "/question-bank", icon: <BookOpen size={16} />, highlight2: true }, // NEW
+    { name: "Question Bank", path: "/question-bank", icon: <BookOpen size={16} /> },
     { name: "AI Assistant", path: "/ai-assistant", icon: <Bot size={16} />, highlight: true },
   ];
 
@@ -47,7 +47,6 @@ export default function Sidebar({ className = "", user }) {
         {links.map((link) => {
           const isActive = location.pathname === link.path;
           const isHighlight = link.highlight;
-          const isHighlight2 = link.highlight2;
           return (
             <Link
               key={link.name}
@@ -56,33 +55,30 @@ export default function Sidebar({ className = "", user }) {
                 display: "flex", alignItems: "center", gap: "0.625rem",
                 padding: "0.5rem 0.75rem", borderRadius: "0.5rem",
                 fontSize: "0.8125rem", fontWeight: 500,
-                color: isActive ? "var(--accent)" : isHighlight ? "var(--purple)" : isHighlight2 ? "var(--green)" : "var(--text-secondary)",
-                background: isActive ? "var(--accent-soft)" : isHighlight ? "rgba(167,139,250,0.08)" : isHighlight2 ? "rgba(52,211,153,0.08)" : "transparent",
-                border: isActive ? "1px solid rgba(245,166,35,0.15)" : isHighlight ? "1px solid rgba(167,139,250,0.15)" : isHighlight2 ? "1px solid rgba(52,211,153,0.15)" : "1px solid transparent",
+                color: isActive ? "var(--accent)" : isHighlight ? "var(--purple)" : "var(--text-secondary)",
+                background: isActive ? "var(--accent-soft)" : isHighlight ? "rgba(167,139,250,0.08)" : "transparent",
+                border: isActive ? "1px solid rgba(245,166,35,0.15)" : isHighlight ? "1px solid rgba(167,139,250,0.15)" : "1px solid transparent",
                 textDecoration: "none", transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.color = isHighlight ? "var(--purple)" : isHighlight2 ? "var(--green)" : "var(--text-primary)";
-                  e.currentTarget.style.background = isHighlight ? "rgba(167,139,250,0.12)" : isHighlight2 ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.04)";
+                  e.currentTarget.style.color = isHighlight ? "var(--purple)" : "var(--text-primary)";
+                  e.currentTarget.style.background = isHighlight ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.color = isHighlight ? "var(--purple)" : isHighlight2 ? "var(--green)" : "var(--text-secondary)";
-                  e.currentTarget.style.background = isHighlight ? "rgba(167,139,250,0.08)" : isHighlight2 ? "rgba(52,211,153,0.08)" : "transparent";
+                  e.currentTarget.style.color = isHighlight ? "var(--purple)" : "var(--text-secondary)";
+                  e.currentTarget.style.background = isHighlight ? "rgba(167,139,250,0.08)" : "transparent";
                 }
               }}
             >
-              <span style={{ color: isActive ? "var(--accent)" : isHighlight ? "var(--purple)" : isHighlight2 ? "var(--green)" : "var(--text-muted)" }}>
+              <span style={{ color: isActive ? "var(--accent)" : isHighlight ? "var(--purple)" : "var(--text-muted)" }}>
                 {link.icon}
               </span>
               {link.name}
               {isHighlight && (
                 <span style={{ marginLeft: "auto", fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "0.25rem", background: "rgba(167,139,250,0.15)", color: "var(--purple)", fontWeight: 700 }}>AI</span>
-              )}
-              {isHighlight2 && (
-                <span style={{ marginLeft: "auto", fontSize: "0.6rem", padding: "0.1rem 0.35rem", borderRadius: "0.25rem", background: "rgba(52,211,153,0.15)", color: "var(--green)", fontWeight: 700 }}>NEW</span>
               )}
             </Link>
           );
