@@ -11,6 +11,7 @@ import MentorRequests from "./pages/Mentor/MentorRequests";
 import AIAssistant from "./pages/AI/AIAssistant";
 import Messages from "./pages/Messages/Messages";
 import Onboarding from "./pages/Onboarding/Onboarding";
+import QuestionBank from "./pages/QuestionBank/QuestionBank"; // NEW
 import Layout from "./components/Layout";
 import { AuthContext } from "./context/AuthContext";
 
@@ -18,7 +19,6 @@ export default function App() {
   const { user, loading } = useContext(AuthContext);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Show onboarding for new users who haven't set up profile yet
   useEffect(() => {
     if (user) {
       const dismissed = localStorage.getItem(`onboarding_done_${user.username}`);
@@ -42,24 +42,14 @@ export default function App() {
 
   return (
     <Layout>
-      {/* Onboarding overlay for new users */}
       {user && showOnboarding && (
         <Onboarding user={user} onComplete={handleOnboardingComplete} />
       )}
-
       <div className="min-h-screen text-slate-800">
         <Routes>
-          {/* Root redirect */}
-          <Route
-            path="/"
-            element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}
-          />
-
-          {/* Auth */}
+          <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-
-          {/* Dashboard — role based */}
           <Route
             path="/dashboard"
             element={
@@ -73,15 +63,12 @@ export default function App() {
               )
             }
           />
-
-          {/* Protected routes */}
           <Route path="/feed" element={user ? <Feed /> : <Navigate to="/login" replace />} />
           <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
           <Route path="/mentor/requests" element={user ? <MentorRequests /> : <Navigate to="/login" replace />} />
           <Route path="/messages" element={user ? <Messages /> : <Navigate to="/login" replace />} />
           <Route path="/ai-assistant" element={user ? <AIAssistant /> : <Navigate to="/login" replace />} />
-
-          {/* 404 */}
+          <Route path="/question-bank" element={user ? <QuestionBank /> : <Navigate to="/login" replace />} /> {/* NEW */}
           <Route path="*" element={
             <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)", color: "var(--text-muted)", fontFamily: "Syne, sans-serif", fontSize: "1.5rem", fontWeight: 800 }}>
               404 — page not found
